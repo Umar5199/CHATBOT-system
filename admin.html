@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Upload Client PDF</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 40px auto; padding: 20px; background: #f7f7fb; }
+        .card { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+        h1 { font-size: 20px; margin-bottom: 6px; color: #333; }
+        .subtitle { color: #777; font-size: 14px; margin-bottom: 20px; }
+
+        .upload-zone {
+            border: 2px dashed #b0b0d0; border-radius: 12px;
+            padding: 36px; text-align: center; cursor: pointer;
+            transition: all 0.2s; background: #fafaff;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #667eea; background: #f0f4ff;
+        }
+        .upload-zone .icon { font-size: 32px; margin-bottom: 8px; }
+        .upload-zone p { font-size: 14px; color: #666; margin: 4px 0; }
+
+        #resultBox {
+            margin-top: 20px; padding: 18px; border-radius: 12px;
+            font-size: 14px; line-height: 1.6; display: none;
+        }
+        #resultBox.success { background: #e6f7ed; border: 1px solid #b7e4c7; color: #1e6b3a; }
+        #resultBox.error   { background: #ffe6e6; border: 1px solid #f5c0c0; color: #a00; }
+        #resultBox code { background: #fff; padding: 8px 12px; border-radius: 6px; font-size: 18px; display: inline-block; margin: 8px 0; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>📄 Admin – Upload Client PDF</h1>
+    <p class="subtitle">Upload a PDF. The server will generate a unique Client ID for you.</p>
+
+    <div class="upload-zone" id="uploadZone">
+        <div class="icon">📎</div>
+        <p><strong>Click here to select a PDF</strong></p>
+        <p>or drag & drop</p>
+        <input type="file" id="pdfFile" accept=".pdf" style="display:none;">
+    </div>
+
+    <div id="resultBox"></div>
+</div>
+
+<script>
+    console.log("✅ Script started");
+
+    const BASE_URL = "http://127.0.0.1:8000";
+    const uploadZone = document.getElementById("uploadZone");
+    const pdfFile = document.getElementById("pdfFile");
+    const resultBox = document.getElementById("resultBox");
+
+    console.log("Elements found:", uploadZone, pdfFile, resultBox);
+
+    // Click zone -> open file picker
+    uploadZone.addEventListener("click", () => {
+        console.log("Upload zone clicked");
+        pdfFile.click();
+    });
+
+    // Drag & drop
+    uploadZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadZone.classList.add("dragover");
+    });
+    uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("dragover"));
+    uploadZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove("dragover");
+        if (e.dataTransfer.files.length) {
+            pdfFile.files = e.dataTransfer.files;
+            console.log("File dropped:", e.dataTransfer.files[0].name);
+            uploadPdf(e.dataTransfer.files[0]);
+        }
+    });
+
+    // File selected via picker
+    pdfFile.addEventListener("change", () => {
+        console.log("File selected via picker");
+        if (pdfFile.files.length) {
+            uploadPdf(pdfFile.files[0]);
+        }
+    });
+
+    async function uploadPdf(file) {
+        console.log("uploadPdf started:", file.name);
+
+        resultBox.style.display = "block";
+        resultBox.className = "";
+        resultBox.textContent = "⏳ Uploading and indexing...";
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await fetch(`${BASE_URL}/upload`, {
+                method: "POST",
+                body: formData
+            });
+            console.log("Response status:", res.status);
+
+            const data = await res.json();
+            console.log("Response data:", data);
+
+            if (data.error) {
+                resultBox.className = "error";
+                resultBox.textContent = "❌ " + data.error;
+            } else {
+                resultBox.className = "success";
+                resultBox.innerHTML = `
+                    <strong>✅ Upload successful!</strong><br><br>
+                    <strong>Client ID:</strong><br>
+                    <code>${data.client_id}</code><br><br>
+                    <small>Copy this ID and paste it into widget.html</small>
+                `;
+            }
+        } catch (err) {
+            console.error("Upload error:", err);
+            resultBox.className = "error";
+            resultBox.textContent = "❌ Upload failed: " + err.message;
+        }
+    }
+</script>
+
+</body>
+</html>

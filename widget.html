@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Support Chat</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; background: #f0f0f5; }
+        #chat-widget {
+            position: fixed; bottom: 20px; right: 20px;
+            width: 350px; height: 500px;
+            border: 1px solid #ddd; border-radius: 12px;
+            background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; z-index: 9999;
+        }
+        .chat-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; padding: 15px; border-radius: 12px 12px 0 0;
+            font-weight: bold;
+        }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 15px; }
+        .chat-input { display: flex; padding: 10px; border-top: 1px solid #eee; }
+        .chat-input input {
+            flex: 1; padding: 10px; border: 1px solid #ddd;
+            border-radius: 20px; outline: none;
+        }
+        .chat-input button {
+            margin-left: 8px; padding: 10px 20px;
+            background: #667eea; color: white; border: none;
+            border-radius: 20px; cursor: pointer;
+        }
+        .msg-user { text-align: right; margin: 8px 0; }
+        .msg-user span {
+            display: inline-block; background: #667eea; color: white;
+            padding: 8px 14px; border-radius: 16px; max-width: 80%;
+        }
+        .msg-bot { text-align: left; margin: 8px 0; }
+        .msg-bot span {
+            display: inline-block; background: #f0f0f0; color: #333;
+            padding: 8px 14px; border-radius: 16px; max-width: 80%;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat-widget">
+    <div class="chat-header">💬 Support Chat</div>
+    <div class="chat-messages" id="messages">
+        <div class="msg-bot"><span>Hello! How can I help you today?</span></div>
+    </div>
+    <div class="chat-input">
+        <input id="userInput" type="text" placeholder="Type a message..."
+               onkeypress="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script>
+    // 🔑 PASTE THE CLIENT ID YOU GOT FROM ADMIN.HTML HERE
+    const CLIENT_ID = "client_10319879"; // ← change this
+
+    const API_URL = "http://127.0.0.1:8000/chat";
+
+    async function sendMessage() {
+        const input = document.getElementById("userInput");
+        const messages = document.getElementById("messages");
+        const text = input.value.trim();
+        if (!text) return;
+
+        messages.innerHTML += `<div class="msg-user"><span>${text}</span></div>`;
+        input.value = "";
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            const res = await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: text, client_id: CLIENT_ID })
+            });
+            const data = await res.json();
+            if (data.error) {
+                messages.innerHTML += `<div class="msg-bot"><span style="color:red;">Error: ${data.error}</span></div>`;
+            } else {
+                messages.innerHTML += `<div class="msg-bot"><span>${data.answer}</span></div>`;
+            }
+        } catch (err) {
+            messages.innerHTML += `<div class="msg-bot"><span style="color:red;">Could not connect.</span></div>`;
+        }
+        messages.scrollTop = messages.scrollHeight;
+    }
+</script>
+</body>
+</html>
